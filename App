@@ -1,0 +1,49 @@
+import React, {useEffect, useState} from 'react';
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  // paste your firebase config here
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function App() {
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "posts"), where("status", "==", "pending"));
+    const unsub = onSnapshot(q, snap => {
+      const arr = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      setPosts(arr);
+    });
+    return () => unsub();
+  }, []);
+
+  async function approve(id) {
+    const d = doc(db, "posts", id);
+    await updateDoc(d, {status: "approved"});
+  }
+
+  async function reject(id) {
+    const d = doc(db, "posts", id);
+    await updateDoc(d, {status: "rejected"});
+  }
+
+  return (
+    <div style={{padding:20}}>
+      <h2>SECRET BD Admin - Pending Posts</h2>
+      {posts.map(p => (
+        <div key={p.id} style={{border:"1px solid #ccc", padding:10, margin:10}}>
+          <h3>{p.title}</h3>
+          <p>{p.description}</p>
+          <button onClick={() => approve(p.id)}>Approve</button>
+          <button onClick={() => reject(p.id)}>Reject</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default App;
